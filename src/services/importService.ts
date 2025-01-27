@@ -37,6 +37,7 @@ export async function processCSVImport(file: File, onProgress: (progress: number
     reader.onload = async (event) => {
       try {
         const csvContent = event.target?.result as string;
+        // Dividir por quebras de linha e filtrar linhas vazias
         const lines = csvContent.split("\n").filter(line => line.trim());
         const total = lines.length - 1; // Excluding header
         let imported = 0;
@@ -55,7 +56,15 @@ export async function processCSVImport(file: File, onProgress: (progress: number
           const line = lines[i].trim();
           if (!line) continue;
 
-          const [nome, email, telefone] = line.split(",").map(field => field.trim());
+          // Processar a linha considerando possíveis aspas e ponto e vírgula
+          const values = line.split(/,|;/).map(field => {
+            // Remover aspas e espaços extras
+            const cleaned = field.trim().replace(/^["']|["']$/g, '');
+            // Remover ponto e vírgula extras
+            return cleaned.replace(/;/g, '');
+          });
+
+          const [nome, email, telefone] = values;
 
           try {
             // Insert cliente
