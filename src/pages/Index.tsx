@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import type { Cliente } from '@/types';
 import { ClienteForm } from '@/components/ClienteForm';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface ClienteComDetalhes extends Cliente {
   emails: { email: string }[];
@@ -31,6 +32,7 @@ export default function Index() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [clienteToDelete, setClienteToDelete] = useState<number | null>(null);
   const { toast } = useToast();
+  const { canModifyData, loading: roleLoading } = useUserRole();
 
   const loadClientes = async () => {
     try {
@@ -87,6 +89,16 @@ export default function Index() {
     }
   };
 
+  if (loading || roleLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-100px)]">
+          Carregando...
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -97,20 +109,22 @@ export default function Index() {
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
           />
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>Novo Cliente</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Novo Cliente</DialogTitle>
-              </DialogHeader>
-              <ClienteForm onSuccess={() => {
-                setDialogOpen(false);
-                loadClientes();
-              }} />
-            </DialogContent>
-          </Dialog>
+          {canModifyData && (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>Novo Cliente</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Novo Cliente</DialogTitle>
+                </DialogHeader>
+                <ClienteForm onSuccess={() => {
+                  setDialogOpen(false);
+                  loadClientes();
+                }} />
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         <div className="rounded-md border">
@@ -120,19 +134,13 @@ export default function Index() {
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mails</TableHead>
                 <TableHead>Telefones</TableHead>
-                <TableHead>Ações</TableHead>
+                {canModifyData && <TableHead>Ações</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
+              {clientes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center">
-                    Carregando...
-                  </TableCell>
-                </TableRow>
-              ) : clientes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center">
+                  <TableCell colSpan={canModifyData ? 4 : 3} className="text-center">
                     Nenhum cliente encontrado
                   </TableCell>
                 </TableRow>
@@ -158,40 +166,42 @@ export default function Index() {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {/* Implement edit */}}
-                        >
-                          Editar
-                        </Button>
-                        <AlertDialog open={clienteToDelete === cliente.id_cliente} onOpenChange={(open) => !open && setClienteToDelete(null)}>
+                    {canModifyData && (
+                      <TableCell>
+                        <div className="flex gap-2">
                           <Button
-                            variant="destructive"
+                            variant="outline"
                             size="sm"
-                            onClick={() => setClienteToDelete(cliente.id_cliente)}
+                            onClick={() => {/* Implement edit */}}
                           >
-                            Excluir
+                            Editar
                           </Button>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(cliente.id_cliente)}>
-                                Confirmar
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
+                          <AlertDialog open={clienteToDelete === cliente.id_cliente} onOpenChange={(open) => !open && setClienteToDelete(null)}>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => setClienteToDelete(cliente.id_cliente)}
+                            >
+                              Excluir
+                            </Button>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(cliente.id_cliente)}>
+                                  Confirmar
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
