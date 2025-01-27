@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ClienteForm } from '@/components/ClienteForm';
+import { ImportCSV } from '@/components/clients/ImportCSV';
 import { useState } from 'react';
 
 interface ClientHeaderProps {
@@ -15,7 +16,7 @@ export function ClientHeader({ search, onSearchChange, canModifyData, onClientAd
   const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between gap-4">
       <Input
         placeholder="Buscar clientes..."
         value={search}
@@ -23,20 +24,23 @@ export function ClientHeader({ search, onSearchChange, canModifyData, onClientAd
         className="max-w-sm"
       />
       {canModifyData && (
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>Novo Cliente</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Novo Cliente</DialogTitle>
-            </DialogHeader>
-            <ClienteForm onSuccess={() => {
-              setDialogOpen(false);
-              onClientAdded();
-            }} />
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <ImportCSV onImportComplete={onClientAdded} />
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>Novo Cliente</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Novo Cliente</DialogTitle>
+              </DialogHeader>
+              <ClienteForm onSuccess={() => {
+                setDialogOpen(false);
+                onClientAdded();
+              }} />
+            </DialogContent>
+          </Dialog>
+        </div>
       )}
     </div>
   );

@@ -50,6 +50,42 @@ export type Database = {
           },
         ]
       }
+      importacoes: {
+        Row: {
+          created_at: string
+          id_importacao: number
+          nome_arquivo: string
+          registros_com_erro: number | null
+          registros_importados: number | null
+          status: string
+          total_registros: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id_importacao?: never
+          nome_arquivo: string
+          registros_com_erro?: number | null
+          registros_importados?: number | null
+          status?: string
+          total_registros?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id_importacao?: never
+          nome_arquivo?: string
+          registros_com_erro?: number | null
+          registros_importados?: number | null
+          status?: string
+          total_registros?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       telefones: {
         Row: {
           id_cliente: number
