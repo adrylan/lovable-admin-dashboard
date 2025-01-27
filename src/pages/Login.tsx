@@ -4,39 +4,51 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     try {
-      console.log('Attempting login with:', { email });
+      console.log('Iniciando tentativa de login com:', { email });
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      console.log('Resposta do Supabase:', { data, error });
+
       if (error) {
-        console.error('Login error:', error);
+        console.error('Erro de login:', error);
         throw error;
       }
 
-      console.log('Login successful:', data);
+      console.log('Login bem-sucedido:', data);
+      toast({
+        title: "Sucesso!",
+        description: "Login realizado com sucesso.",
+      });
+      
       navigate('/');
     } catch (error: any) {
-      console.error('Login error details:', error);
+      console.error('Detalhes do erro de login:', error);
+      setError(error.message || 'Ocorreu um erro ao fazer login. Tente novamente.');
       toast({
-        title: 'Erro ao fazer login',
+        title: "Erro no login",
         description: error.message || 'Verifique suas credenciais e tente novamente.',
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -48,8 +60,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Card className="w-[400px]">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-[400px]">
         <CardHeader>
           <CardTitle className="text-2xl text-center">Entrar</CardTitle>
           <p className="text-center text-muted-foreground mt-2">
@@ -57,6 +69,11 @@ export default function Login() {
           </p>
         </CardHeader>
         <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Input
@@ -65,6 +82,8 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="w-full"
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -74,11 +93,13 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="w-full"
+                disabled={loading}
               />
             </div>
             <Button
               type="submit"
-              className="w-full bg-[#0f172a] hover:bg-[#1e293b]"
+              className="w-full bg-primary hover:bg-primary/90"
               disabled={loading}
             >
               {loading ? 'Entrando...' : 'Entrar'}
@@ -88,6 +109,7 @@ export default function Login() {
                 type="button"
                 onClick={handleSignUpClick}
                 className="text-blue-500 hover:underline text-sm"
+                disabled={loading}
               >
                 Não tem uma conta? Cadastre-se
               </button>
