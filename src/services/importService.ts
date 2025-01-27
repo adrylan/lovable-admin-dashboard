@@ -9,10 +9,13 @@ interface ClienteImportado {
 export async function processCSVImport(file: File, onProgress: (progress: number) => void) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
+    console.error("User not authenticated");
     throw new Error("Usuário não autenticado");
   }
 
   try {
+    console.log("Starting CSV import process");
+    
     // Create import record
     const { data: importacao, error: importError } = await supabase
       .from("importacoes")
@@ -24,9 +27,13 @@ export async function processCSVImport(file: File, onProgress: (progress: number
       .select()
       .single();
 
-    if (importError) throw importError;
+    if (importError) {
+      console.error("Error creating import record:", importError);
+      throw importError;
+    }
 
     onProgress(20);
+    console.log("Import record created");
 
     // Upload file to storage
     const filePath = `${user.id}/${Date.now()}_${file.name}`;
@@ -34,9 +41,13 @@ export async function processCSVImport(file: File, onProgress: (progress: number
       .from("csv-imports")
       .upload(filePath, file);
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error("Error uploading file:", uploadError);
+      throw uploadError;
+    }
 
     onProgress(40);
+    console.log("File uploaded to storage");
 
     // Process the file
     return new Promise<{ imported: number; errors: number }>((resolve, reject) => {
@@ -44,6 +55,7 @@ export async function processCSVImport(file: File, onProgress: (progress: number
       
       reader.onload = async (event) => {
         try {
+          console.log("Starting file processing");
           const text = event.target?.result as string;
           const lines = text.split(/\r?\n/).filter(line => line.trim());
           
@@ -80,6 +92,7 @@ export async function processCSVImport(file: File, onProgress: (progress: number
           }
 
           onProgress(80);
+          console.log(`Processing ${clientesMap.size} unique clients`);
 
           const total = clientesMap.size;
           let imported = 0;
@@ -94,6 +107,8 @@ export async function processCSVImport(file: File, onProgress: (progress: number
           // Importar clientes agrupados
           for (const cliente of clientesMap.values()) {
             try {
+              console.log(`Importing client: ${cliente.nome}`);
+              
               // Insert cliente
               const { data: clienteData, error: clienteError } = await supabase
                 .from("clientes")
@@ -101,7 +116,10 @@ export async function processCSVImport(file: File, onProgress: (progress: number
                 .select()
                 .single();
 
-              if (clienteError) throw clienteError;
+              if (clienteError) {
+                console.error(`Error inserting client ${cliente.nome}:`, clienteError);
+                throw clienteError;
+              }
 
               // Insert emails
               const emailsArray = Array.from(cliente.emails);
@@ -114,7 +132,10 @@ export async function processCSVImport(file: File, onProgress: (progress: number
                       email
                     }))
                   );
-                if (emailsError) throw emailsError;
+                if (emailsError) {
+                  console.error(`Error inserting emails for client ${cliente.nome}:`, emailsError);
+                  throw emailsError;
+                }
               }
 
               // Insert telefones
@@ -128,10 +149,14 @@ export async function processCSVImport(file: File, onProgress: (progress: number
                       telefone
                     }))
                   );
-                if (telefonesError) throw telefonesError;
+                if (telefonesError) {
+                  console.error(`Error inserting phones for client ${cliente.nome}:`, telefonesError);
+                  throw telefonesError;
+                }
               }
 
               imported++;
+              console.log(`Successfully imported client ${cliente.nome}`);
             } catch (error) {
               console.error("Error processing cliente:", cliente, error);
               errors++;
@@ -149,6 +174,7 @@ export async function processCSVImport(file: File, onProgress: (progress: number
           }
 
           onProgress(100);
+          console.log("Import process completed", { imported, errors });
           resolve({ imported, errors });
         } catch (error) {
           console.error("Error processing CSV:", error);

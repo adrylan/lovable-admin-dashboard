@@ -11,11 +11,13 @@ export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const { file, setFile, isUploading, progress, handleUpload, error, resetState } = useCSVImport(() => {
+    console.log("Import completed, closing dialog");
     setIsOpen(false);
     onImportComplete();
   });
 
   const handleFileChange = (selectedFile: File | null) => {
+    console.log("File selected:", selectedFile?.name);
     if (selectedFile && selectedFile.type !== "text/csv") {
       toast({
         title: "Arquivo inválido",
@@ -28,22 +30,23 @@ export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }
   };
 
   const handleClose = () => {
+    console.log("Dialog closing, isUploading:", isUploading);
     if (!isUploading) {
-      setIsOpen(false);
-      setFile(null);
       resetState();
+      setIsOpen(false);
     }
   };
 
   const handleOpen = () => {
+    console.log("Opening import dialog");
     resetState();
     setIsOpen(true);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogTrigger asChild onClick={handleOpen}>
-        <Button variant="outline">
+      <DialogTrigger asChild>
+        <Button variant="outline" onClick={handleOpen}>
           <Upload className="mr-2 h-4 w-4" />
           Importar CSV
         </Button>

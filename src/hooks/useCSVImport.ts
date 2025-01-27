@@ -10,6 +10,7 @@ export function useCSVImport(onSuccess: () => void) {
   const { toast } = useToast();
 
   const resetState = () => {
+    console.log("Resetting import state");
     setFile(null);
     setIsUploading(false);
     setProgress(0);
@@ -17,21 +18,23 @@ export function useCSVImport(onSuccess: () => void) {
   };
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (!file) {
+      console.log("No file selected for upload");
+      return;
+    }
 
     try {
+      console.log("Starting file upload:", file.name);
       setIsUploading(true);
       setError(null);
       setProgress(0);
 
-      console.log('Iniciando importação do arquivo:', file.name);
-      
       const { imported, errors } = await processCSVImport(file, (progress) => {
-        console.log('Progresso da importação:', progress);
+        console.log('Upload progress:', progress);
         setProgress(progress);
       });
       
-      console.log('Importação concluída:', { imported, errors });
+      console.log('Import completed:', { imported, errors });
 
       toast({
         title: "Importação concluída",
@@ -48,6 +51,7 @@ export function useCSVImport(onSuccess: () => void) {
         variant: "destructive",
       });
     } finally {
+      console.log("Import process finished");
       setIsUploading(false);
       setFile(null);
       setProgress(0);
