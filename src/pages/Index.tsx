@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -21,6 +21,7 @@ export default function Index() {
 
   const loadClientes = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('clientes')
         .select(`
@@ -34,6 +35,7 @@ export default function Index() {
       if (error) throw error;
       setClientes(data || []);
     } catch (error) {
+      console.error('Error loading clients:', error);
       toast({
         title: 'Erro ao carregar clientes',
         description: 'Não foi possível carregar a lista de clientes.',
@@ -43,6 +45,10 @@ export default function Index() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadClientes();
+  }, [search]); // Reload when search changes
 
   const handleDelete = async (id: number) => {
     try {
@@ -60,6 +66,7 @@ export default function Index() {
       
       loadClientes();
     } catch (error) {
+      console.error('Error deleting client:', error);
       toast({
         title: 'Erro ao excluir cliente',
         description: 'Não foi possível excluir o cliente.',
