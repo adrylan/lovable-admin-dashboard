@@ -18,17 +18,24 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Attempting login with:', { email });
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Login error:', error);
+        throw error;
+      }
+
+      console.log('Login successful:', data);
       navigate('/');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Login error details:', error);
       toast({
         title: 'Erro ao fazer login',
-        description: 'Verifique suas credenciais e tente novamente.',
+        description: error.message || 'Verifique suas credenciais e tente novamente.',
         variant: 'destructive',
       });
     } finally {
