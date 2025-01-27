@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useState } from "react";
 
 interface ClientHeaderProps {
   search: string;
@@ -30,6 +32,8 @@ export function ClientHeader({
   onClientAdded,
 }: ClientHeaderProps) {
   const { toast } = useToast();
+  const { isAdmin } = useUserRole();
+  const [showSecondConfirmation, setShowSecondConfirmation] = useState(false);
 
   const handleDeleteAll = async () => {
     try {
@@ -64,6 +68,7 @@ export function ClientHeader({
 
       // Atualizar a lista de clientes
       onClientAdded();
+      setShowSecondConfirmation(false);
     } catch (error) {
       console.error('Erro ao excluir registros:', error);
       toast({
@@ -71,6 +76,7 @@ export function ClientHeader({
         description: "Ocorreu um erro ao tentar excluir os registros.",
         variant: "destructive",
       });
+      setShowSecondConfirmation(false);
     }
   };
 
@@ -87,27 +93,51 @@ export function ClientHeader({
       </div>
       {canModifyData && (
         <div className="flex gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">
-                Excluir Todos
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Confirmar exclusão em massa</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Tem certeza que deseja excluir todos os registros? Esta ação não pode ser desfeita.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteAll}>
-                  Confirmar
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {isAdmin && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  Excluir Todos
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Primeira confirmação de exclusão</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Você está prestes a excluir todos os registros do sistema. Esta ação requer confirmação dupla.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setShowSecondConfirmation(false)}>
+                    Cancelar
+                  </AlertDialogCancel>
+                  <AlertDialogAction onClick={() => setShowSecondConfirmation(true)}>
+                    Continuar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          {showSecondConfirmation && (
+            <AlertDialog open={showSecondConfirmation}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmação final de exclusão</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    ATENÇÃO: Esta é a confirmação final. Ao confirmar, todos os registros serão permanentemente excluídos. Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setShowSecondConfirmation(false)}>
+                    Cancelar
+                  </AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAll}>
+                    Confirmar Exclusão
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
           <ImportCSV onImportComplete={onClientAdded} />
         </div>
       )}
