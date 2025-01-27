@@ -10,7 +10,7 @@ import { useCSVImport } from "@/hooks/useCSVImport";
 export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
-  const { file, setFile, isUploading, progress, handleUpload, error } = useCSVImport(() => {
+  const { file, setFile, isUploading, progress, handleUpload, error, resetState } = useCSVImport(() => {
     setIsOpen(false);
     onImportComplete();
   });
@@ -31,12 +31,18 @@ export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }
     if (!isUploading) {
       setIsOpen(false);
       setFile(null);
+      resetState();
     }
+  };
+
+  const handleOpen = () => {
+    resetState();
+    setIsOpen(true);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogTrigger asChild>
+      <DialogTrigger asChild onClick={handleOpen}>
         <Button variant="outline">
           <Upload className="mr-2 h-4 w-4" />
           Importar CSV

@@ -9,6 +9,13 @@ export function useCSVImport(onSuccess: () => void) {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const resetState = () => {
+    setFile(null);
+    setIsUploading(false);
+    setProgress(0);
+    setError(null);
+  };
+
   const handleUpload = async () => {
     if (!file) return;
 
@@ -53,6 +60,7 @@ export function useCSVImport(onSuccess: () => void) {
     isUploading,
     progress,
     error,
-    handleUpload
+    handleUpload,
+    resetState
   };
 }
