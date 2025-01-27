@@ -121,20 +121,24 @@ export default function Index() {
               ) : (
                 clientes.map((cliente) => (
                   <TableRow key={cliente.id_cliente}>
-                    <TableCell>{cliente.nome}</TableCell>
+                    <TableCell className="font-medium">{cliente.nome}</TableCell>
                     <TableCell>
-                      <ul className="list-disc list-inside">
+                      <div className="space-y-1">
                         {cliente.emails?.map((email, index) => (
-                          <li key={index}>{email.email}</li>
+                          <div key={index} className="text-sm text-gray-600">
+                            {email.email}
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <ul className="list-disc list-inside">
+                      <div className="space-y-1">
                         {cliente.telefones?.map((telefone, index) => (
-                          <li key={index}>{telefone.telefone}</li>
+                          <div key={index} className="text-sm text-gray-600">
+                            {telefone.telefone}
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
