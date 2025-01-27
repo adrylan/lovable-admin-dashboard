@@ -33,12 +33,19 @@ export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }
       setIsUploading(true);
       setProgress(10);
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Usuário não autenticado");
+      }
+
       // Create import record
       const { data: importacao, error: importError } = await supabase
         .from("importacoes")
         .insert({
           nome_arquivo: file.name,
           status: "processando",
+          user_id: user.id
         })
         .select()
         .single();
@@ -48,7 +55,7 @@ export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }
       setProgress(30);
 
       // Upload file to storage
-      const filePath = `${supabase.auth.getUser().then(({ data }) => data.user?.id)}/${Date.now()}_${file.name}`;
+      const filePath = `${user.id}/${Date.now()}_${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from("csv-imports")
         .upload(filePath, file);
