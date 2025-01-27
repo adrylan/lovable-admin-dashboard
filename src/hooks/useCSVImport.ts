@@ -6,6 +6,7 @@ export function useCSVImport(onSuccess: () => void) {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleUpload = async () => {
@@ -13,17 +14,22 @@ export function useCSVImport(onSuccess: () => void) {
 
     try {
       setIsUploading(true);
+      setError(null);
       setProgress(10);
 
+      console.log('Iniciando importação do arquivo:', file.name);
       const { imported, errors } = await processCSVImport(file, setProgress);
+      console.log('Importação concluída:', { imported, errors });
 
       toast({
         title: "Importação concluída",
         description: `${imported} registros importados, ${errors} erros`,
       });
+      
       onSuccess();
     } catch (error) {
       console.error("Error during import:", error);
+      setError("Ocorreu um erro ao tentar importar o arquivo. Por favor, tente novamente.");
       toast({
         title: "Erro na importação",
         description: "Ocorreu um erro ao tentar importar o arquivo.",
@@ -41,6 +47,7 @@ export function useCSVImport(onSuccess: () => void) {
     setFile,
     isUploading,
     progress,
+    error,
     handleUpload
   };
 }

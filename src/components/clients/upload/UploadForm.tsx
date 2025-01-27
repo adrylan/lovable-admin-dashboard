@@ -1,14 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Upload, X } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface UploadFormProps {
   file: File | null;
   isUploading: boolean;
+  error?: string | null;
   onFileChange: (file: File | null) => void;
   onUpload: () => void;
 }
 
-export function UploadForm({ file, isUploading, onFileChange, onUpload }: UploadFormProps) {
+export function UploadForm({ file, isUploading, error, onFileChange, onUpload }: UploadFormProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile && selectedFile.type === "text/csv") {
@@ -18,6 +20,12 @@ export function UploadForm({ file, isUploading, onFileChange, onUpload }: Upload
 
   return (
     <div className="space-y-4">
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
       {!file && (
         <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6">
           <input
@@ -26,6 +34,7 @@ export function UploadForm({ file, isUploading, onFileChange, onUpload }: Upload
             onChange={handleFileChange}
             className="hidden"
             id="csv-upload"
+            disabled={isUploading}
           />
           <label
             htmlFor="csv-upload"

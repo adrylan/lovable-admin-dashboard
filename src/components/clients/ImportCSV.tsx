@@ -10,7 +10,7 @@ import { useCSVImport } from "@/hooks/useCSVImport";
 export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
-  const { file, setFile, isUploading, progress, handleUpload } = useCSVImport(() => {
+  const { file, setFile, isUploading, progress, handleUpload, error } = useCSVImport(() => {
     setIsOpen(false);
     onImportComplete();
   });
@@ -27,8 +27,15 @@ export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }
     setFile(selectedFile);
   };
 
+  const handleClose = () => {
+    if (!isUploading) {
+      setIsOpen(false);
+      setFile(null);
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogTrigger asChild>
         <Button variant="outline">
           <Upload className="mr-2 h-4 w-4" />
@@ -45,6 +52,7 @@ export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }
             isUploading={isUploading}
             onFileChange={handleFileChange}
             onUpload={handleUpload}
+            error={error}
           />
           {isUploading && <UploadProgress progress={progress} />}
         </div>
