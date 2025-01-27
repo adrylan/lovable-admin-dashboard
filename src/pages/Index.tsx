@@ -1,24 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import type { Cliente } from '@/types';
-import { ClienteForm } from '@/components/ClienteForm';
 import { useUserRole } from '@/hooks/useUserRole';
+import { ClientList } from '@/components/clients/ClientList';
+import { ClientHeader } from '@/components/clients/ClientHeader';
 
 interface ClienteComDetalhes extends Cliente {
   emails: { email: string }[];
@@ -29,8 +16,6 @@ export default function Index() {
   const [clientes, setClientes] = useState<ClienteComDetalhes[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [clienteToDelete, setClienteToDelete] = useState<number | null>(null);
   const { toast } = useToast();
   const { canModifyData, loading: roleLoading } = useUserRole();
 
@@ -59,10 +44,6 @@ export default function Index() {
     }
   };
 
-  useEffect(() => {
-    loadClientes();
-  }, [search]);
-
   const handleDelete = async (id: number) => {
     try {
       const { error } = await supabase
@@ -84,9 +65,12 @@ export default function Index() {
         description: 'Não foi possível excluir o cliente.',
         variant: 'destructive',
       });
-    } finally {
-      setClienteToDelete(null);
     }
+  };
+
+  const handleEdit = (cliente: Cliente) => {
+    // Implement edit functionality
+    console.log('Edit cliente:', cliente);
   };
 
   if (loading || roleLoading) {
@@ -102,112 +86,18 @@ export default function Index() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Input
-            placeholder="Buscar clientes..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="max-w-sm"
-          />
-          {canModifyData && (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>Novo Cliente</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Novo Cliente</DialogTitle>
-                </DialogHeader>
-                <ClienteForm onSuccess={() => {
-                  setDialogOpen(false);
-                  loadClientes();
-                }} />
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>E-mails</TableHead>
-                <TableHead>Telefones</TableHead>
-                {canModifyData && <TableHead>Ações</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clientes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={canModifyData ? 4 : 3} className="text-center">
-                    Nenhum cliente encontrado
-                  </TableCell>
-                </TableRow>
-              ) : (
-                clientes.map((cliente) => (
-                  <TableRow key={cliente.id_cliente}>
-                    <TableCell className="font-medium">{cliente.nome}</TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {cliente.emails?.map((email, index) => (
-                          <div key={index} className="text-sm text-gray-600">
-                            {email.email}
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {cliente.telefones?.map((telefone, index) => (
-                          <div key={index} className="text-sm text-gray-600">
-                            {telefone.telefone}
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                    {canModifyData && (
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {/* Implement edit */}}
-                          >
-                            Editar
-                          </Button>
-                          <AlertDialog open={clienteToDelete === cliente.id_cliente} onOpenChange={(open) => !open && setClienteToDelete(null)}>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => setClienteToDelete(cliente.id_cliente)}
-                            >
-                              Excluir
-                            </Button>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(cliente.id_cliente)}>
-                                  Confirmar
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <ClientHeader
+          search={search}
+          onSearchChange={setSearch}
+          canModifyData={canModifyData}
+          onClientAdded={loadClientes}
+        />
+        <ClientList
+          clientes={clientes}
+          canModifyData={canModifyData}
+          onDelete={handleDelete}
+          onEdit={handleEdit}
+        />
       </div>
     </DashboardLayout>
   );
