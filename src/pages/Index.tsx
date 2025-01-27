@@ -8,8 +8,13 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
 import type { Cliente } from '@/types';
 
+interface ClienteComDetalhes extends Cliente {
+  emails: { email: string }[];
+  telefones: { telefone: string }[];
+}
+
 export default function Index() {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [clientes, setClientes] = useState<ClienteComDetalhes[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const { toast } = useToast();
@@ -18,7 +23,11 @@ export default function Index() {
     try {
       const { data, error } = await supabase
         .from('clientes')
-        .select('*')
+        .select(`
+          *,
+          emails (email),
+          telefones (telefone)
+        `)
         .ilike('nome', `%${search}%`)
         .order('nome');
 
@@ -91,19 +100,21 @@ export default function Index() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>E-mails</TableHead>
+                <TableHead>Telefones</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={2} className="text-center">
+                  <TableCell colSpan={4} className="text-center">
                     Carregando...
                   </TableCell>
                 </TableRow>
               ) : clientes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={2} className="text-center">
+                  <TableCell colSpan={4} className="text-center">
                     Nenhum cliente encontrado
                   </TableCell>
                 </TableRow>
@@ -111,6 +122,20 @@ export default function Index() {
                 clientes.map((cliente) => (
                   <TableRow key={cliente.id_cliente}>
                     <TableCell>{cliente.nome}</TableCell>
+                    <TableCell>
+                      <ul className="list-disc list-inside">
+                        {cliente.emails?.map((email, index) => (
+                          <li key={index}>{email.email}</li>
+                        ))}
+                      </ul>
+                    </TableCell>
+                    <TableCell>
+                      <ul className="list-disc list-inside">
+                        {cliente.telefones?.map((telefone, index) => (
+                          <li key={index}>{telefone.telefone}</li>
+                        ))}
+                      </ul>
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
