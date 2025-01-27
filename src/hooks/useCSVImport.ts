@@ -15,11 +15,16 @@ export function useCSVImport(onSuccess: () => void) {
     try {
       setIsUploading(true);
       setError(null);
-      setProgress(10);
+      setProgress(0);
 
+      console.log('Iniciando importação do arquivo:', file.name);
+      
       const { imported, errors } = await processCSVImport(file, (progress) => {
+        console.log('Progresso da importação:', progress);
         setProgress(progress);
       });
+      
+      console.log('Importação concluída:', { imported, errors });
 
       toast({
         title: "Importação concluída",
