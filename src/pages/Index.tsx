@@ -4,7 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useToast } from '@/components/ui/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import type { Cliente } from '@/types';
 import { ClienteForm } from '@/components/ClienteForm';
@@ -19,6 +29,7 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [clienteToDelete, setClienteToDelete] = useState<number | null>(null);
   const { toast } = useToast();
 
   const loadClientes = async () => {
@@ -71,6 +82,8 @@ export default function Index() {
         description: 'Não foi possível excluir o cliente.',
         variant: 'destructive',
       });
+    } finally {
+      setClienteToDelete(null);
     }
   };
 
@@ -154,13 +167,29 @@ export default function Index() {
                         >
                           Editar
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(cliente.id_cliente)}
-                        >
-                          Excluir
-                        </Button>
+                        <AlertDialog open={clienteToDelete === cliente.id_cliente} onOpenChange={(open) => !open && setClienteToDelete(null)}>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setClienteToDelete(cliente.id_cliente)}
+                          >
+                            Excluir
+                          </Button>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(cliente.id_cliente)}>
+                                Confirmar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </TableCell>
                   </TableRow>
