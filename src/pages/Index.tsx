@@ -6,6 +6,8 @@ import type { Cliente } from '@/types';
 import { useUserRole } from '@/hooks/useUserRole';
 import { ClientList } from '@/components/clients/ClientList';
 import { ClientHeader } from '@/components/clients/ClientHeader';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ClienteForm } from '@/components/ClienteForm';
 
 interface ClienteComDetalhes extends Cliente {
   emails: { email: string }[];
@@ -16,6 +18,7 @@ export default function Index() {
   const [clientes, setClientes] = useState<ClienteComDetalhes[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [clienteParaEditar, setClienteParaEditar] = useState<ClienteComDetalhes | null>(null);
   const { toast } = useToast();
   const { canModifyData, loading: roleLoading } = useUserRole();
 
@@ -48,7 +51,7 @@ export default function Index() {
 
   useEffect(() => {
     loadClientes();
-  }, [search]); // Reload when search changes
+  }, [search]);
 
   const handleDelete = async (id: number) => {
     try {
@@ -75,9 +78,12 @@ export default function Index() {
     }
   };
 
-  const handleEdit = (cliente: Cliente) => {
-    // Implement edit functionality
-    console.log('Edit cliente:', cliente);
+  const handleEdit = (cliente: Cliente & { emails?: { email: string }[]; telefones?: { telefone: string }[] }) => {
+    setClienteParaEditar({
+      ...cliente,
+      emails: cliente.emails || [],
+      telefones: cliente.telefones || []
+    });
   };
 
   if (loading || roleLoading) {
@@ -105,6 +111,22 @@ export default function Index() {
           onDelete={handleDelete}
           onEdit={handleEdit}
         />
+        <Dialog open={!!clienteParaEditar} onOpenChange={(open) => !open && setClienteParaEditar(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Cliente</DialogTitle>
+            </DialogHeader>
+            {clienteParaEditar && (
+              <ClienteForm
+                clienteInicial={clienteParaEditar}
+                onSuccess={() => {
+                  setClienteParaEditar(null);
+                  loadClientes();
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

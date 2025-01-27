@@ -11,16 +11,25 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Plus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/components/ui/use-toast";
+import type { Cliente } from "@/types";
 
 const formSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
 });
 
-export function ClienteForm({ onSuccess }: { onSuccess: () => void }) {
+interface ClienteFormProps {
+  onSuccess: () => void;
+  clienteInicial?: Cliente & {
+    emails?: { email: string }[];
+    telefones?: { telefone: string }[];
+  };
+}
+
+export function ClienteForm({ onSuccess, clienteInicial }: ClienteFormProps) {
   const [emails, setEmails] = useState<string[]>([""]);
   const [telefones, setTelefones] = useState<string[]>([""]);
   const { toast } = useToast();
@@ -28,57 +37,119 @@ export function ClienteForm({ onSuccess }: { onSuccess: () => void }) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      nome: "",
+      nome: clienteInicial?.nome || "",
     },
   });
 
+  useEffect(() => {
+    if (clienteInicial) {
+      const emailsIniciais = clienteInicial.emails?.map(e => e.email) || [""];
+      const telefonesIniciais = clienteInicial.telefones?.map(t => t.telefone) || [""];
+      setEmails(emailsIniciais);
+      setTelefones(telefonesIniciais);
+    }
+  }, [clienteInicial]);
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      // Insert cliente
-      const { data: clienteData, error: clienteError } = await supabase
-        .from("clientes")
-        .insert([{ nome: values.nome }])
-        .select()
-        .single();
+      if (clienteInicial) {
+        // Atualizar cliente existente
+        const { error: clienteError } = await supabase
+          .from("clientes")
+          .update({ nome: values.nome })
+          .eq("id_cliente", clienteInicial.id_cliente);
 
-      if (clienteError) throw clienteError;
+        if (clienteError) throw clienteError;
 
-      // Insert emails
-      const emailsToInsert = emails.filter((email) => email.trim() !== "");
-      if (emailsToInsert.length > 0) {
-        const { error: emailsError } = await supabase
+        // Deletar emails e telefones existentes
+        await supabase
           .from("emails")
-          .insert(
-            emailsToInsert.map((email) => ({
-              id_cliente: clienteData.id_cliente,
-              email,
-            }))
-          );
-        if (emailsError) throw emailsError;
-      }
+          .delete()
+          .eq("id_cliente", clienteInicial.id_cliente);
 
-      // Insert telefones
-      const telefonesToInsert = telefones.filter((tel) => tel.trim() !== "");
-      if (telefonesToInsert.length > 0) {
-        const { error: telefonesError } = await supabase
+        await supabase
           .from("telefones")
-          .insert(
-            telefonesToInsert.map((telefone) => ({
-              id_cliente: clienteData.id_cliente,
-              telefone,
-            }))
-          );
-        if (telefonesError) throw telefonesError;
-      }
+          .delete()
+          .eq("id_cliente", clienteInicial.id_cliente);
 
-      toast({
-        title: "Cliente cadastrado com sucesso!",
-      });
+        // Inserir novos emails
+        const emailsToInsert = emails.filter((email) => email.trim() !== "");
+        if (emailsToInsert.length > 0) {
+          const { error: emailsError } = await supabase
+            .from("emails")
+            .insert(
+              emailsToInsert.map((email) => ({
+                id_cliente: clienteInicial.id_cliente,
+                email,
+              }))
+            );
+          if (emailsError) throw emailsError;
+        }
+
+        // Inserir novos telefones
+        const telefonesToInsert = telefones.filter((tel) => tel.trim() !== "");
+        if (telefonesToInsert.length > 0) {
+          const { error: telefonesError } = await supabase
+            .from("telefones")
+            .insert(
+              telefonesToInsert.map((telefone) => ({
+                id_cliente: clienteInicial.id_cliente,
+                telefone,
+              }))
+            );
+          if (telefonesError) throw telefonesError;
+        }
+
+        toast({
+          title: "Cliente atualizado com sucesso!",
+        });
+      } else {
+        // Inserir novo cliente
+        const { data: clienteData, error: clienteError } = await supabase
+          .from("clientes")
+          .insert([{ nome: values.nome }])
+          .select()
+          .single();
+
+        if (clienteError) throw clienteError;
+
+        // Inserir emails
+        const emailsToInsert = emails.filter((email) => email.trim() !== "");
+        if (emailsToInsert.length > 0) {
+          const { error: emailsError } = await supabase
+            .from("emails")
+            .insert(
+              emailsToInsert.map((email) => ({
+                id_cliente: clienteData.id_cliente,
+                email,
+              }))
+            );
+          if (emailsError) throw emailsError;
+        }
+
+        // Inserir telefones
+        const telefonesToInsert = telefones.filter((tel) => tel.trim() !== "");
+        if (telefonesToInsert.length > 0) {
+          const { error: telefonesError } = await supabase
+            .from("telefones")
+            .insert(
+              telefonesToInsert.map((telefone) => ({
+                id_cliente: clienteData.id_cliente,
+                telefone,
+              }))
+            );
+          if (telefonesError) throw telefonesError;
+        }
+
+        toast({
+          title: "Cliente cadastrado com sucesso!",
+        });
+      }
       onSuccess();
     } catch (error) {
       toast({
-        title: "Erro ao cadastrar cliente",
-        description: "Ocorreu um erro ao tentar cadastrar o cliente.",
+        title: clienteInicial ? "Erro ao atualizar cliente" : "Erro ao cadastrar cliente",
+        description: "Ocorreu um erro ao tentar salvar os dados do cliente.",
         variant: "destructive",
       });
     }
@@ -178,7 +249,7 @@ export function ClienteForm({ onSuccess }: { onSuccess: () => void }) {
         </div>
 
         <Button type="submit" className="w-full">
-          Cadastrar Cliente
+          {clienteInicial ? "Atualizar Cliente" : "Cadastrar Cliente"}
         </Button>
       </form>
     </Form>
