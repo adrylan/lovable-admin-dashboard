@@ -1,5 +1,11 @@
 import { supabase } from "@/lib/supabase";
 
+interface ClienteImportado {
+  nome: string;
+  emails: Set<string>;
+  telefones: Set<string>;
+}
+
 export async function processCSVImport(file: File, onProgress: (progress: number) => void) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -39,7 +45,40 @@ export async function processCSVImport(file: File, onProgress: (progress: number
         const csvContent = event.target?.result as string;
         // Dividir por quebras de linha e filtrar linhas vazias
         const lines = csvContent.split("\n").filter(line => line.trim());
-        const total = lines.length - 1; // Excluding header
+        
+        // Mapa para agrupar clientes por nome
+        const clientesMap = new Map<string, ClienteImportado>();
+        
+        // Processar cada linha e agrupar por nome
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+
+          const values = line.split(/,|;/).map(field => {
+            const cleaned = field.trim().replace(/^["']|["']$/g, '');
+            return cleaned.replace(/;/g, '');
+          });
+
+          const [nome, email, telefone] = values;
+          
+          if (!nome) continue;
+
+          // Se o cliente já existe no mapa, adiciona os contatos
+          if (clientesMap.has(nome)) {
+            const cliente = clientesMap.get(nome)!;
+            if (email) cliente.emails.add(email);
+            if (telefone) cliente.telefones.add(telefone);
+          } else {
+            // Se não existe, cria um novo registro
+            clientesMap.set(nome, {
+              nome,
+              emails: new Set(email ? [email] : []),
+              telefones: new Set(telefone ? [telefone] : [])
+            });
+          }
+        }
+
+        const total = clientesMap.size;
         let imported = 0;
         let errors = 0;
 
@@ -51,48 +90,49 @@ export async function processCSVImport(file: File, onProgress: (progress: number
 
         onProgress(80);
 
-        // Process each line
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
-
-          // Processar a linha considerando possíveis aspas e ponto e vírgula
-          const values = line.split(/,|;/).map(field => {
-            // Remover aspas e espaços extras
-            const cleaned = field.trim().replace(/^["']|["']$/g, '');
-            // Remover ponto e vírgula extras
-            return cleaned.replace(/;/g, '');
-          });
-
-          const [nome, email, telefone] = values;
-
+        // Importar clientes agrupados
+        for (const cliente of clientesMap.values()) {
           try {
             // Insert cliente
-            const { data: cliente, error: clienteError } = await supabase
+            const { data: clienteData, error: clienteError } = await supabase
               .from("clientes")
-              .insert({ nome })
+              .insert({ nome: cliente.nome })
               .select()
               .single();
 
             if (clienteError) throw clienteError;
 
-            // Insert email if provided
-            if (email) {
-              await supabase
+            // Insert emails
+            const emailsArray = Array.from(cliente.emails);
+            if (emailsArray.length > 0) {
+              const { error: emailsError } = await supabase
                 .from("emails")
-                .insert({ id_cliente: cliente.id_cliente, email });
+                .insert(
+                  emailsArray.map(email => ({
+                    id_cliente: clienteData.id_cliente,
+                    email
+                  }))
+                );
+              if (emailsError) throw emailsError;
             }
 
-            // Insert telefone if provided
-            if (telefone) {
-              await supabase
+            // Insert telefones
+            const telefonesArray = Array.from(cliente.telefones);
+            if (telefonesArray.length > 0) {
+              const { error: telefonesError } = await supabase
                 .from("telefones")
-                .insert({ id_cliente: cliente.id_cliente, telefone });
+                .insert(
+                  telefonesArray.map(telefone => ({
+                    id_cliente: clienteData.id_cliente,
+                    telefone
+                  }))
+                );
+              if (telefonesError) throw telefonesError;
             }
 
             imported++;
           } catch (error) {
-            console.error("Error processing line:", line, error);
+            console.error("Error processing cliente:", cliente, error);
             errors++;
           }
 
@@ -102,7 +142,7 @@ export async function processCSVImport(file: File, onProgress: (progress: number
             .update({
               registros_importados: imported,
               registros_com_erro: errors,
-              status: i === lines.length - 1 ? "concluido" : "processando",
+              status: imported + errors === total ? "concluido" : "processando",
             })
             .eq("id_importacao", importacao.id_importacao);
         }
