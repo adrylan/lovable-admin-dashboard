@@ -35,9 +35,9 @@ export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" onClick={() => setIsOpen(true)}>
           <Upload className="mr-2 h-4 w-4" />
           Importar CSV
         </Button>

@@ -41,16 +41,10 @@ export async function processCSVImport(file: File, onProgress: (progress: number
   return new Promise<{ imported: number; errors: number }>((resolve, reject) => {
     const reader = new FileReader();
     
-    // Configurar o reader para ler o arquivo como texto com codificação ISO-8859-1
     reader.onload = async (event) => {
       try {
-        // Converter o texto do arquivo para UTF-8
-        const decoder = new TextDecoder('iso-8859-1');
-        const arrayBuffer = event.target?.result as ArrayBuffer;
-        const csvContent = decoder.decode(arrayBuffer);
-        
-        // Dividir por quebras de linha e filtrar linhas vazias
-        const lines = csvContent.split(/\r?\n/).filter(line => line.trim());
+        const text = event.target?.result as string;
+        const lines = text.split(/\r?\n/).filter(line => line.trim());
         
         // Mapa para agrupar clientes por nome
         const clientesMap = new Map<string, ClienteImportado>();
@@ -69,13 +63,11 @@ export async function processCSVImport(file: File, onProgress: (progress: number
           
           if (!nome) continue;
 
-          // Se o cliente já existe no mapa, adiciona os contatos
           if (clientesMap.has(nome)) {
             const cliente = clientesMap.get(nome)!;
             if (email) cliente.emails.add(email);
             if (telefone) cliente.telefones.add(telefone);
           } else {
-            // Se não existe, cria um novo registro
             clientesMap.set(nome, {
               nome,
               emails: new Set(email ? [email] : []),
@@ -160,7 +152,6 @@ export async function processCSVImport(file: File, onProgress: (progress: number
       }
     };
 
-    // Ler o arquivo como ArrayBuffer para poder tratar a codificação
-    reader.readAsArrayBuffer(file);
+    reader.readAsText(file, 'ISO-8859-1');
   });
 }
