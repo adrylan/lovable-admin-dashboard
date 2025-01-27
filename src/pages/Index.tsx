@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
 import type { Cliente } from '@/types';
+import { ClienteForm } from '@/components/ClienteForm';
 
 interface ClienteComDetalhes extends Cliente {
   emails: { email: string }[];
@@ -17,6 +18,7 @@ export default function Index() {
   const [clientes, setClientes] = useState<ClienteComDetalhes[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const loadClientes = async () => {
@@ -82,15 +84,18 @@ export default function Index() {
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
           />
-          <Dialog>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button>Novo Cliente</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>Novo Cliente</DialogTitle>
               </DialogHeader>
-              {/* Form implementation */}
+              <ClienteForm onSuccess={() => {
+                setDialogOpen(false);
+                loadClientes();
+              }} />
             </DialogContent>
           </Dialog>
         </div>
