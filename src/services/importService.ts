@@ -40,11 +40,17 @@ export async function processCSVImport(file: File, onProgress: (progress: number
   // Process the file
   return new Promise<{ imported: number; errors: number }>((resolve, reject) => {
     const reader = new FileReader();
+    
+    // Configurar o reader para ler o arquivo como texto com codificação ISO-8859-1
     reader.onload = async (event) => {
       try {
-        const csvContent = event.target?.result as string;
+        // Converter o texto do arquivo para UTF-8
+        const decoder = new TextDecoder('iso-8859-1');
+        const arrayBuffer = event.target?.result as ArrayBuffer;
+        const csvContent = decoder.decode(arrayBuffer);
+        
         // Dividir por quebras de linha e filtrar linhas vazias
-        const lines = csvContent.split("\n").filter(line => line.trim());
+        const lines = csvContent.split(/\r?\n/).filter(line => line.trim());
         
         // Mapa para agrupar clientes por nome
         const clientesMap = new Map<string, ClienteImportado>();
@@ -154,6 +160,7 @@ export async function processCSVImport(file: File, onProgress: (progress: number
       }
     };
 
-    reader.readAsText(file);
+    // Ler o arquivo como ArrayBuffer para poder tratar a codificação
+    reader.readAsArrayBuffer(file);
   });
 }
