@@ -49,13 +49,14 @@ export function useCSVImport(onSuccess: () => void) {
       
       console.log('Import completed:', { imported, errors });
 
+      // Importante: resetar o estado antes de chamar onSuccess
+      resetState();
+      
       toast({
         title: "Importação concluída",
         description: `${imported} registros importados, ${errors} erros`,
       });
       
-      // Importante: resetar o estado antes de chamar onSuccess
-      resetState();
       onSuccess();
     } catch (error: any) {
       console.error("Error during import:", error);
