@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,18 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  useEffect(() => {
+    // Check if user is already logged in
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate('/');
+      }
+    };
+    
+    checkUser();
+  }, [navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -23,25 +35,32 @@ export default function Login() {
     try {
       console.log('Iniciando tentativa de login com:', { email });
       
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      console.log('Resposta do Supabase:', { data, error });
+      console.log('Resposta do Supabase:', { data, signInError });
 
-      if (error) {
-        console.error('Erro de login:', error);
-        throw error;
+      if (signInError) {
+        console.error('Erro de login:', signInError);
+        throw signInError;
       }
 
-      console.log('Login bem-sucedido:', data);
-      toast({
-        title: "Sucesso!",
-        description: "Login realizado com sucesso.",
-      });
-      
-      navigate('/');
+      if (data?.session) {
+        // Ensure the session is properly set
+        await supabase.auth.setSession(data.session);
+        
+        console.log('Login bem-sucedido:', data);
+        toast({
+          title: "Sucesso!",
+          description: "Login realizado com sucesso.",
+        });
+        
+        navigate('/');
+      } else {
+        throw new Error('Sessão não criada após login');
+      }
     } catch (error: any) {
       console.error('Detalhes do erro de login:', error);
       setError(error.message || 'Ocorreu um erro ao fazer login. Tente novamente.');
