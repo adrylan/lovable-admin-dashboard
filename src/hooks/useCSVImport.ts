@@ -27,7 +27,6 @@ export function useCSVImport(onSuccess: () => void) {
     try {
       console.log("Starting file upload:", file.name);
       
-      // Verificar sessão antes de prosseguir
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.error("Sessão não encontrada");
@@ -38,7 +37,6 @@ export function useCSVImport(onSuccess: () => void) {
       setError(null);
       setProgress(0);
 
-      // Primeiro, vamos verificar se o arquivo é válido
       if (file.type !== "text/csv") {
         throw new Error("Por favor, selecione um arquivo CSV válido.");
       }
@@ -56,6 +54,8 @@ export function useCSVImport(onSuccess: () => void) {
         description: `${imported} registros importados, ${errors} erros`,
       });
       
+      // Importante: resetar o estado antes de chamar onSuccess
+      resetState();
       onSuccess();
     } catch (error: any) {
       console.error("Error during import:", error);
@@ -66,8 +66,6 @@ export function useCSVImport(onSuccess: () => void) {
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
-      console.log("Import process finished");
       setIsUploading(false);
       setProgress(0);
     }
