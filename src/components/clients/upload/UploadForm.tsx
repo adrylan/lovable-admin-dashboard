@@ -13,7 +13,8 @@ interface UploadFormProps {
 export function UploadForm({ file, isUploading, error, onFileChange, onUpload }: UploadFormProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile && selectedFile.type === "text/csv") {
+    if (selectedFile) {
+      console.log("File selected in UploadForm:", selectedFile.name);
       onFileChange(selectedFile);
     }
   };

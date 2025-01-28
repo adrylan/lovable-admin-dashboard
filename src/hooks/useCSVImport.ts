@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { processCSVImport } from "@/services/importService";
+import { supabase } from "@/lib/supabase";
 
 export function useCSVImport(onSuccess: () => void) {
   const [file, setFile] = useState<File | null>(null);
@@ -25,10 +26,24 @@ export function useCSVImport(onSuccess: () => void) {
 
     try {
       console.log("Starting file upload:", file.name);
+      
+      // Verificar sessão antes de prosseguir
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error("Sessão não encontrada");
+        throw new Error("Sua sessão expirou. Por favor, faça login novamente.");
+      }
+
       setIsUploading(true);
       setError(null);
       setProgress(0);
 
+      // Primeiro, vamos verificar se o arquivo é válido
+      if (file.type !== "text/csv") {
+        throw new Error("Por favor, selecione um arquivo CSV válido.");
+      }
+
+      console.log("Processing CSV file...");
       const { imported, errors } = await processCSVImport(file, (progress) => {
         console.log('Upload progress:', progress);
         setProgress(progress);
@@ -42,18 +57,18 @@ export function useCSVImport(onSuccess: () => void) {
       });
       
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during import:", error);
-      setError("Ocorreu um erro ao tentar importar o arquivo. Por favor, tente novamente.");
+      const errorMessage = error.message || "Ocorreu um erro ao tentar importar o arquivo.";
+      setError(errorMessage);
       toast({
         title: "Erro na importação",
-        description: "Ocorreu um erro ao tentar importar o arquivo.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       console.log("Import process finished");
       setIsUploading(false);
-      setFile(null);
       setProgress(0);
     }
   };
