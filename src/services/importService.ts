@@ -32,8 +32,8 @@ export async function processCSVImport(file: File, onProgress: (progress: number
       throw importError;
     }
 
-    onProgress(20);
-    console.log("Import record created");
+    onProgress(10);
+    console.log("Import record created, ID:", importacao.id_importacao);
 
     // Upload file to storage
     const filePath = `${user.id}/${Date.now()}_${file.name}`;
@@ -46,8 +46,8 @@ export async function processCSVImport(file: File, onProgress: (progress: number
       throw uploadError;
     }
 
-    onProgress(40);
-    console.log("File uploaded to storage");
+    onProgress(30);
+    console.log("File uploaded to storage:", filePath);
 
     // Process the file
     return new Promise<{ imported: number; errors: number }>((resolve, reject) => {
@@ -55,11 +55,12 @@ export async function processCSVImport(file: File, onProgress: (progress: number
       
       reader.onload = async (event) => {
         try {
-          console.log("Starting file processing");
+          console.log("Starting file content processing");
           const text = event.target?.result as string;
           const lines = text.split(/\r?\n/).filter(line => line.trim());
           
-          onProgress(60);
+          onProgress(40);
+          console.log(`Processing ${lines.length} lines from CSV`);
           
           // Mapa para agrupar clientes por nome
           const clientesMap = new Map<string, ClienteImportado>();
@@ -76,7 +77,10 @@ export async function processCSVImport(file: File, onProgress: (progress: number
 
             const [nome, email, telefone] = values;
             
-            if (!nome) continue;
+            if (!nome) {
+              console.log(`Skipping line ${i + 1}: Empty name`);
+              continue;
+            }
 
             if (clientesMap.has(nome)) {
               const cliente = clientesMap.get(nome)!;
@@ -89,19 +93,24 @@ export async function processCSVImport(file: File, onProgress: (progress: number
                 telefones: new Set(telefone ? [telefone] : [])
               });
             }
+
+            // Atualizar progresso periodicamente
+            if (i % 10 === 0) {
+              const progress = Math.floor(40 + (i / lines.length) * 30);
+              onProgress(progress);
+            }
           }
 
-          onProgress(80);
-          console.log(`Processing ${clientesMap.size} unique clients`);
+          onProgress(70);
+          console.log(`Processed ${clientesMap.size} unique clients`);
 
-          const total = clientesMap.size;
           let imported = 0;
           let errors = 0;
 
           // Update total records
           await supabase
             .from("importacoes")
-            .update({ total_registros: total })
+            .update({ total_registros: clientesMap.size })
             .eq("id_importacao", importacao.id_importacao);
 
           // Importar clientes agrupados
@@ -118,59 +127,61 @@ export async function processCSVImport(file: File, onProgress: (progress: number
 
               if (clienteError) {
                 console.error(`Error inserting client ${cliente.nome}:`, clienteError);
-                throw clienteError;
+                errors++;
+                continue;
               }
 
               // Insert emails
-              const emailsArray = Array.from(cliente.emails);
-              if (emailsArray.length > 0) {
+              if (cliente.emails.size > 0) {
                 const { error: emailsError } = await supabase
                   .from("emails")
                   .insert(
-                    emailsArray.map(email => ({
+                    Array.from(cliente.emails).map(email => ({
                       id_cliente: clienteData.id_cliente,
                       email
                     }))
                   );
                 if (emailsError) {
                   console.error(`Error inserting emails for client ${cliente.nome}:`, emailsError);
-                  throw emailsError;
                 }
               }
 
               // Insert telefones
-              const telefonesArray = Array.from(cliente.telefones);
-              if (telefonesArray.length > 0) {
+              if (cliente.telefones.size > 0) {
                 const { error: telefonesError } = await supabase
                   .from("telefones")
                   .insert(
-                    telefonesArray.map(telefone => ({
+                    Array.from(cliente.telefones).map(telefone => ({
                       id_cliente: clienteData.id_cliente,
                       telefone
                     }))
                   );
                 if (telefonesError) {
                   console.error(`Error inserting phones for client ${cliente.nome}:`, telefonesError);
-                  throw telefonesError;
                 }
               }
 
               imported++;
               console.log(`Successfully imported client ${cliente.nome}`);
+
+              // Atualizar progresso periodicamente
+              const progress = Math.floor(70 + (imported / clientesMap.size) * 30);
+              onProgress(progress);
+
+              // Update import progress
+              await supabase
+                .from("importacoes")
+                .update({
+                  registros_importados: imported,
+                  registros_com_erro: errors,
+                  status: imported + errors === clientesMap.size ? "concluido" : "processando",
+                })
+                .eq("id_importacao", importacao.id_importacao);
+
             } catch (error) {
               console.error("Error processing cliente:", cliente, error);
               errors++;
             }
-
-            // Update progress
-            await supabase
-              .from("importacoes")
-              .update({
-                registros_importados: imported,
-                registros_com_erro: errors,
-                status: imported + errors === total ? "concluido" : "processando",
-              })
-              .eq("id_importacao", importacao.id_importacao);
           }
 
           onProgress(100);
