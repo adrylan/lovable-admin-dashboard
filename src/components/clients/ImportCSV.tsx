@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UploadForm } from "./upload/UploadForm";
 import { UploadProgress } from "./upload/UploadProgress";
 import { useCSVImport } from "@/hooks/useCSVImport";
+import { supabase } from "@/lib/supabase";
 
 export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,8 +17,21 @@ export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }
     onImportComplete();
   });
 
-  const handleFileChange = (selectedFile: File | null) => {
+  const handleFileChange = async (selectedFile: File | null) => {
     console.log("File selected:", selectedFile?.name);
+    
+    // Verificar sessão antes de prosseguir
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error("Sessão não encontrada");
+      toast({
+        title: "Erro de sessão",
+        description: "Sua sessão expirou. Por favor, faça login novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (selectedFile && selectedFile.type !== "text/csv") {
       toast({
         title: "Arquivo inválido",
@@ -37,8 +51,21 @@ export function ImportCSV({ onImportComplete }: { onImportComplete: () => void }
     }
   };
 
-  const handleOpen = () => {
+  const handleOpen = async () => {
     console.log("Opening import dialog");
+    
+    // Verificar sessão antes de abrir o diálogo
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error("Sessão não encontrada");
+      toast({
+        title: "Erro de sessão",
+        description: "Sua sessão expirou. Por favor, faça login novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     resetState();
     setIsOpen(true);
   };
